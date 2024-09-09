@@ -13,6 +13,3 @@ class CartItem(Base):
 
     product = relationship("Product")
     user = relationship("User")
-
-    class Config:
-        from_attributes = True
