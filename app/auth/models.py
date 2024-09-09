@@ -11,6 +11,3 @@ class User(Base):
     phone = Column(String, unique=True, nullable=False)
     hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
-
-    class Config:
-        from_attributes = True

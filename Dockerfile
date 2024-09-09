@@ -21,5 +21,14 @@ RUN pip install poetry && \
 # Копируем всё приложение в контейнер
 COPY . .
 
+# Копирование скрипта запуска
+COPY start.sh /app/start.sh
+
+# Сделать скрипт исполняемым
+RUN chmod +x /app/start.sh
+
+# Запуск приложения
+CMD ["./start.sh"]
+
 # Expose порт для приложения
 EXPOSE 8000
