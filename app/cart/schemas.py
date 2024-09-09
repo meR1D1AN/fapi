@@ -17,4 +17,4 @@ class CartOut(BaseModel):
     total_price: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
