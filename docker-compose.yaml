@@ -1,14 +1,24 @@
-version: "3.9"
+version: "3"
 
 services:
   db:
-    image: postgres:16
+    image: postgres
+    restart: on-failure
     env_file:
       - .env
+    ports:
+      - '5432:5432'
+    expose:
+      - '5432'
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     networks:
-      - app_network
+      - fapi
+    healthcheck:
+      test: [ 'CMD-SHELL', '-c', 'pg_isready -U $POSTGRES_USER -d $POSTGRES_DB' ]
+      interval: 1s
+      retries: 2
+      timeout: 1s
 
   web:
     build: .
@@ -21,11 +31,22 @@ services:
     env_file:
       - .env
     networks:
-      - app_network
-    command: ./start.sh
+      - fapi
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  migrations:
+    build: .
+    volumes:
+      - .:/app
+    command: alembic upgrade head
+    env_file:
+      - .env
+    networks:
+      - fapi
 
 networks:
-  app_network:
+  fapi:
+    external: true
 
 volumes:
-  postgres_data:
+  pg_data:

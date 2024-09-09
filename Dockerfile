@@ -2,7 +2,8 @@
 FROM python:3.12.5-slim
 
 # Устанавливаем зависимости системы для сборки
-RUN apt-get update && apt-get install -y build-essential libpq-dev curl
+RUN apt-get update && apt-get install -y build-essential libpq-dev curl postgresql-client
+
 
 # Устанавливаем Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
@@ -21,11 +22,3 @@ RUN pip install poetry && \
 # Копируем всё приложение в контейнер
 COPY . .
 
-# Сделать скрипт исполняемым
-RUN chmod +x /app/start.sh
-
-# Запуск приложения
-CMD ["./start.sh"]
-
-# Expose порт для приложения
-EXPOSE 8000
