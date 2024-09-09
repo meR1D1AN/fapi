@@ -4,6 +4,9 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import AsyncEngine
 from alembic import context
 from app.db.base import Base  # Импортируем базовый класс моделей
+from app.auth.models import User
+from app.products.models import Product
+from app.cart.models import CartItem
 from app.core.config import settings  # Импортируем конфигурации
 
 # Конфигурация логгера Alembic
