@@ -23,7 +23,20 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 
 @router.post("/register", response_model=dict)
-async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register_user(
+        user_data: UserCreate,
+        db: AsyncSession = Depends(get_db)
+) -> dict:
+    """
+    Обработчик POST-запроса для регистрации нового пользователя.
+    Аргументы:
+        user_data (UserCreate): Данные нового пользователя.
+        db (AsyncSession, optional): Сеанс асинхронной базы данных. По умолчанию получается из зависимости get_db.
+    Исключения:
+        HTTPException: Если пользователь с таким email или телефоном уже существует.
+    Возвращает:
+        dict: Сообщение об успешной регистрации.
+    """
     # Проверяем, существует ли пользователь с таким email или телефоном
     stmt = select(User).where((User.email == user_data.email) | (User.phone == user_data.phone))
     result = await db.execute(stmt)
@@ -43,17 +56,30 @@ async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db
     db.add(new_user)  # Добавляем пользователя в базу данных
     await db.commit()  # Фиксируем транзакцию
     await db.refresh(new_user)  # Обновляем объект из базы
-
     return {"message": "Пользователь успешно зарегистрирован"}
 
 
 @router.post("/login", response_model=Token)
-async def login_for_access_token(db: AsyncSession = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
+async def login_for_access_token(
+        db: AsyncSession = Depends(get_db),
+        form_data: OAuth2PasswordRequestForm = Depends()
+) -> dict:
+    """
+    Обработчик POST-запроса на получение токена доступа.
+    Аутентифицирует пользователя по email и паролю, а затем выдаёт токен доступа.
+    Аргументы:
+        db (AsyncSession, optional): Сеанс асинхронной базы данных. По умолчанию получается из зависимости get_db.
+        form_data (OAuth2PasswordRequestForm): Форма аутентификации.
+    Исключения:
+        HTTPException: Если аутентификация не удалась.
+    Возвращает:
+        dict: Токен доступа и тип токена.
+    """
     user = await authenticate_user(db, email=form_data.username, password=form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email, phone or password",
+            detail="Неправильный email, телефон или пароль",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -63,4 +89,11 @@ async def login_for_access_token(db: AsyncSession = Depends(get_db), form_data: 
 
 @router.get("/users/me", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    """
+    Возвращает информацию о текущем авторизованном пользователе.
+    Аргументы:
+        current_user (User): Текущий пользователь, полученный из токена доступа.
+    Возвращает:
+        User
+    """
     return current_user

@@ -1,47 +1,95 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
 from app.auth.models import User
 from app.cart.models import CartItem
 from app.cart.schemas import CartItemCreate, CartOut
 from app.products.models import Product
 from app.db.session import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_active_user
 
 router = APIRouter()
 
 
-# Добавление товаров в корзину
 @router.post("/cart", response_model=CartOut)
-async def add_to_cart(item: CartItemCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
-    product = db.query(Product).filter(Product.id == item.product_id, Product.is_active == True).first()
+async def add_to_cart(
+        item_data: CartItemCreate,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_active_user)
+) -> CartItem:
+    """
+    Добавляет товар в корзину пользователя.
+    Аргументы:
+        item_data (CartItemCreate): Данные товара для добавления в корзину.
+        db (AsyncSession, optional): Сеанс асинхронной базы данных. По умолчанию получается из зависимости get_db.
+        current_user (User): Текущий авторизованный пользователь. Defaults to Depends(get_current_active_user).
+    Исключения:
+        HTTPException: Если товар не найден в базе данных.
+    Возвращает:
+        CartItem: Объект добавленного товара в корзину.
+    """
+    stmt = select(Product).where(Product.id == item_data.product_id)
+    result = await db.execute(stmt)
+    product = result.scalars().first()
+
     if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+        raise HTTPException(status_code=404, detail="Товар не найден")
 
-    cart_item = db.query(CartItem).filter(CartItem.product_id == item.product_id, CartItem.user_id == user.id).first()
-    if cart_item:
-        cart_item.quantity += item.quantity
-    else:
-        cart_item = CartItem(product_id=item.product_id, user_id=user.id, quantity=item.quantity)
-        db.add(cart_item)
-
-    db.commit()
-    return await get_cart(user, db)
-
-
-# Получение содержимого корзины
-@router.get("/cart", response_model=CartOut)
-async def get_cart(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    items = db.query(CartItem).filter(CartItem.user_id == user.id).all()
-    total_price = sum([item.quantity * item.product.price for item in items])
-    return CartOut(
-        items=[{"product_id": item.product_id, "quantity": item.quantity} for item in items],
-        total_price=total_price
+    cart_item = CartItem(
+        product_id=item_data.product_id,
+        user_id=current_user.id,
+        quantity=item_data.quantity
     )
+    db.add(cart_item)
+    await db.commit()
+    await db.refresh(cart_item)
+    return cart_item
 
 
-# Очистка корзины
-@router.delete("/cart", response_model=dict)
-async def clear_cart(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    db.query(CartItem).filter(CartItem.user_id == user.id).delete()
-    db.commit()
-    return {"message": "Cart cleared"}
+@router.get("/cart", response_model=list[CartOut])
+async def get_cart(
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_active_user)
+) -> list[CartItem]:
+    """
+    Возвращает содержимое корзины пользователя.
+    Аргументы:
+        db (AsyncSession, optional): Сеанс асинхронной базы данных. По умолчанию получается из зависимости get_db.
+        current_user (User): Текущий авторизованный пользователь. Defaults to Depends(get_current_active_user).
+    Возвращает:
+        list[CartOut]: Список объектов товаров в корзине пользователя.
+    """
+    stmt = select(CartItem).where(CartItem.user_id == current_user.id)
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.delete("/cart/{item_id}", status_code=204)
+async def remove_from_cart(
+        item_id: int,
+        db: AsyncSession = Depends(get_db),
+        current_user: User = Depends(get_current_active_user)
+) -> dict:
+    """
+    Удаляет товар из корзины пользователя.
+    Аргументы:
+        item_id (int): ID товара для удаления из корзины.
+        db (AsyncSession): Сессия базы данных. Defaults to Depends(get_db).
+        current_user (User): Текущий авторизованный пользователь. Defaults to Depends(get_current_active_user).
+    Исключения:
+        HTTPException: Если товар не найден в корзине пользователя.
+    Возвращает:
+        dict: Сообщение об успешном удалении товара из корзины.
+    """
+    stmt = select(CartItem).where(CartItem.id == item_id, CartItem.user_id == current_user.id)
+    result = await db.execute(stmt)
+    cart_item = result.scalars().first()
+
+    if not cart_item:
+        raise HTTPException(status_code=404, detail="Элемент корзины не найден")
+
+    await db.delete(cart_item)
+    await db.commit()
+    return {"message": "Корзина очищена"}
