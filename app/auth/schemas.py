@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr, validator
+import re
 
 
 class UserCreate(BaseModel):
@@ -10,10 +11,9 @@ class UserCreate(BaseModel):
 
     @validator('phone')
     def phone_must_match_pattern(cls, v):
-        import re
-        pattern = re.compile(r'^\d{3}-\d{3}-\d{4}$')  # Замените на желаемый рисунок
+        pattern = re.compile(r'^\+7\d{10}$')  # Замените на желаемый рисунок
         if not pattern.match(v):
-            raise ValueError('Неверный номер телефона')
+            raise ValueError('Номер телефона должен начинаться с +7 и содержать 10 цифр')
         return v
 
     @validator('password')
