@@ -13,7 +13,10 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
     # Проверяем, существует ли пользователь с таким email или телефоном
     user = db.query(User).filter((User.email == user_data.email) | (User.phone == user_data.phone)).first()
     if user:
-        raise HTTPException(status_code=400, detail="User with this email or phone already exists.")
+        raise HTTPException(
+            status_code=400,
+            detail="Пользователь с таким электронным адресом или телефоном уже существует."
+        )
 
     # Создаем нового пользователя
     new_user = User(
@@ -27,4 +30,4 @@ async def register_user(user_data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
 
-    return {"message": "User successfully registered"}
+    return {"message": "Пользователь успешно зарегистрирован"}
