@@ -63,7 +63,32 @@ class UserCreate(BaseModel):
             raise ValueError('Пароли не совпадают')
         return v
 
+    class Config:
+        from_attributes = True
+        json_schema_extra = {
+            "example": {
+                "full_name": "Полное Ф.И.О.",
+                "email": "user@example.com",
+                "phone": "+79999999999",
+                "password": "passworD123!",
+                "password_confirm": "passworD123!"
+            }
+        }
+
+
+class UserRegister(UserCreate):
+    class Config:
+        from_attributes = True
+
+
+class UserOut(UserCreate):
+    class Config:
+        from_attributes = True
+
 
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+    class Config:
+        from_attributes = True

@@ -18,3 +18,11 @@ class CartOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class CartDelete(BaseModel):
+    message: str
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {"example": {"message": "Корзина очищена"}}

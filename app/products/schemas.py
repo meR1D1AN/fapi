@@ -13,6 +13,10 @@ class ProductUpdate(BaseModel):
     price: Optional[int] = Field(None, gt=0)
     is_active: Optional[bool]
 
+    class Config:
+        from_attributes = True
+        json_schema_extra = {"example": {"name": "Товар", "price": 100}}
+
 
 class ProductOut(BaseModel):
     id: int
@@ -24,3 +28,11 @@ class ProductOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ProductDelete(BaseModel):
+    message: str
+
+    class Config:
+        from_attributes = True
+        json_schema_extra = {"example": {"message": "Товар удален"}}

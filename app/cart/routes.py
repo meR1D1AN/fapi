@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 
 from app.auth.models import User
 from app.cart.models import CartItem
-from app.cart.schemas import CartItemCreate, CartOut
+from app.cart.schemas import CartItemCreate, CartOut, CartDelete
 from app.products.models import Product
 from app.db.session import get_db
 from app.core.security import get_current_active_user
@@ -20,15 +20,15 @@ async def add_to_cart(
         current_user: User = Depends(get_current_active_user)
 ) -> CartItem:
     """
-    Добавляет товар в корзину пользователя.
-    Аргументы:
-        item_data (CartItemCreate): Данные товара для добавления в корзину.
-        db (AsyncSession, optional): Сеанс асинхронной базы данных. По умолчанию получается из зависимости get_db.
-        current_user (User): Текущий авторизованный пользователь. Defaults to Depends(get_current_active_user).
-    Исключения:
-        HTTPException: Если товар не найден в базе данных.
-    Возвращает:
-        CartItem: Объект добавленного товара в корзину.
+    Добавляет товар в корзину пользователя.\n
+    Аргументы:\n
+        \t item_data (CartItemCreate): Данные товара для добавления в корзину.
+        \t db (AsyncSession, optional): Сеанс асинхронной базы данных. По умолчанию получается из зависимости get_db.
+        \t current_user (User): Текущий авторизованный пользователь. Defaults to Depends(get_current_active_user).
+    Исключения:\n
+        \t HTTPException: Если товар не найден в базе данных.
+    Возвращает:\n
+        \t CartItem: Объект добавленного товара в корзину.
     """
     stmt = select(Product).where(Product.id == item_data.product_id)
     result = await db.execute(stmt)
@@ -54,34 +54,34 @@ async def get_cart(
         current_user: User = Depends(get_current_active_user)
 ) -> list[CartItem]:
     """
-    Возвращает содержимое корзины пользователя.
-    Аргументы:
-        db (AsyncSession, optional): Сеанс асинхронной базы данных. По умолчанию получается из зависимости get_db.
-        current_user (User): Текущий авторизованный пользователь. Defaults to Depends(get_current_active_user).
-    Возвращает:
-        list[CartOut]: Список объектов товаров в корзине пользователя.
+    Возвращает содержимое корзины пользователя.\n
+    Аргументы:\n
+        \t db (AsyncSession, optional): Сеанс асинхронной базы данных. По умолчанию получается из зависимости get_db.
+        \t current_user (User): Текущий авторизованный пользователь. Defaults to Depends(get_current_active_user).
+    Возвращает:\n
+        \t list[CartOut]: Список объектов товаров в корзине пользователя.
     """
     stmt = select(CartItem).where(CartItem.user_id == current_user.id)
     result = await db.execute(stmt)
     return result.scalars().all()
 
 
-@router.delete("/cart/{item_id}", status_code=204)
+@router.delete("/cart/{item_id}", response_model=CartDelete)
 async def remove_from_cart(
         item_id: int,
         db: AsyncSession = Depends(get_db),
         current_user: User = Depends(get_current_active_user)
 ) -> dict:
     """
-    Удаляет товар из корзины пользователя.
-    Аргументы:
-        item_id (int): ID товара для удаления из корзины.
-        db (AsyncSession): Сессия базы данных. Defaults to Depends(get_db).
-        current_user (User): Текущий авторизованный пользователь. Defaults to Depends(get_current_active_user).
-    Исключения:
-        HTTPException: Если товар не найден в корзине пользователя.
-    Возвращает:
-        dict: Сообщение об успешном удалении товара из корзины.
+    Удаляет товар из корзины пользователя.\n
+    Аргументы:\n
+        \t item_id (int): ID товара для удаления из корзины.
+        \t db (AsyncSession): Сессия базы данных. Defaults to Depends(get_db).
+        \t current_user (User): Текущий авторизованный пользователь. Defaults to Depends(get_current_active_user).
+    Исключения:\n
+        \t HTTPException: Если товар не найден в корзине пользователя.
+    Возвращает:\n
+        \t dict: Сообщение об успешном удалении товара из корзины.
     """
     stmt = select(CartItem).where(CartItem.id == item_id, CartItem.user_id == current_user.id)
     result = await db.execute(stmt)
